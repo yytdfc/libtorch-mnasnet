@@ -1,0 +1,12 @@
+*.DS_Store
+*.trash
+*.o
+*.so
+*.a
+build/*
+*.pyc
+__pycache__
+*.gz
+*.tar
+*.pkl
+*.pb
