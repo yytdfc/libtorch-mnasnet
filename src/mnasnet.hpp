@@ -89,13 +89,13 @@ struct MnasNet : torch::nn::Module {
   vector<torch::nn::Sequential> layers;
   torch::nn::Sequential classifier;
 
-  MnasNet(size_t n_class=1000, float width_mult=1.0) {
+  MnasNet(size_t n_class=1000, size_t img_channel=3, float width_mult=1.0) {
     size_t input_channel = 32 * width_mult;
     size_t last_channel = 1280 * width_mult;
-    layers.emplace_back(register_module("layer0", Conv3x3(/*in*/ 3, /*out*/ input_channel, /*stride*/ 2)));
+    layers.emplace_back(register_module("layer0", Conv3x3(/*in*/ img_channel, /*out*/ input_channel, /*stride*/ 2)));
     layers.emplace_back(register_module("layer1", SepConv3x3(/*in*/ input_channel, /*out*/ 16)));
     input_channel = 16;
-    for(size_t i=0; i!=6; ++i){
+    for(size_t i=0; i!=4; ++i){
       size_t expand_ratio = config[i][0];
       size_t output_channel = config[i][1];
       size_t n = config[i][2];
@@ -120,7 +120,10 @@ struct MnasNet : torch::nn::Module {
     classifier = register_module("classifier", torch::nn::Sequential(
           Conv2d(input_channel, last_channel, /*kernel*/ 1, /*stride*/ 1, /*padding*/ 0, /*dilation*/ 1, /*groups*/ 1, false),
           torch::nn::Functional(torch::adaptive_avg_pool2d, torch::IntList({1,1})),
-          Conv2d(last_channel, n_class, /*kernel*/ 1, /*stride*/ 1, /*padding*/ 0, /*dilation*/ 1, /*groups*/ 1, false)
+          Conv2d(last_channel, n_class, /*kernel*/ 1, /*stride*/ 1, /*padding*/ 0, /*dilation*/ 1, /*groups*/ 1, /*bias*/ true)
+          // torch::nn::Functional(torch::squeeze, 3),
+          // torch::nn::Functional(torch::squeeze, 2)
+          // torch::nn::Functional(torch::log_softmax,/*dim=*/ 1)
           ));
   }
 
@@ -135,7 +138,9 @@ struct MnasNet : torch::nn::Module {
 
   torch::Tensor forward(torch::Tensor x) {
      x = features(x).back();
-     return classifier->forward(x);
+     x = classifier->forward(x).squeeze(2).squeeze(2);
+     x = torch::log_softmax(x, /*dim=*/1);
+     return x;
   }
 
   torch::Tensor loss(torch::Tensor x) {
