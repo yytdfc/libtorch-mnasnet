@@ -1,6 +1,7 @@
 #include <torch/torch.h>
 #include <iostream>
 #include "mnasnet.hpp"
+#include "cifar.hpp"
 using namespace mnasnet;
 
 int main() {
@@ -20,4 +21,6 @@ int main() {
   for(auto& l : conv3x3.features(tensor))
     std::cout << l.sizes() << std::endl;
   std::cout << conv3x3.forward(tensor).sizes() << std::endl;
+
+  Cifar("./data/cifar-10-batches-bin/");
 }
